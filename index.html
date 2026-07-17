@@ -61,7 +61,10 @@ small.note{display:block;color:var(--ash);font-size:.72rem;margin-top:8px;line-h
     <div class="field">
       <label>Your words</label>
       <textarea id="text" placeholder="Quote or describe what you're looking for&hellip;"></textarea>
-      <div class="tip">Tip: wrap words in *asterisks* to make them orange.</div>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="btn sm ghost" id="flipBtn">&#8646; Flip orange</button>
+      </div>
+      <div class="tip">The orange half fills in automatically when you click out of the box. Hit Flip to swap which part is orange.</div>
     </div>
     <div class="field">
       <label>Credit / sub-line (optional)</label>
@@ -100,11 +103,35 @@ const LOGO="./logo.png", RAVEN="./raven.png";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const O="#EC6328", WHITE="#fff", ASH="#8A8580", BODY="#D3CEC5";
 const $=s=>document.querySelector(s);
-const state={text:"", attr:"", bg:""};
+const state={text:"", attr:"", bg:"", twoTone:false, swap:false};
 
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function W(s){return '<span style="color:'+WHITE+'">'+esc(s)+'</span>';}
+function Or(s){return '<span style="color:'+O+'">'+esc(s)+'</span>';}
 function fmt(s){return esc(s).replace(/\*([^*]+)\*/g,'<span style="color:'+O+'">$1</span>').replace(/\n/g,"<br>");}
 function fontRem(t){const n=(t||"").length; if(n<=34)return 5.6; if(n<=64)return 4.6; if(n<=110)return 3.7; if(n<=170)return 3.0; if(n<=240)return 2.5; return 2.1;}
+
+// Auto white/orange split, applied once the user finishes typing.
+function twoTone(text, swap){
+  const lines=text.split("\n");
+  const idx=[]; lines.forEach((l,i)=>{ if(l.trim()) idx.push(i); });
+  if(idx.length>=2){                      // multi-line: orange one whole line
+    const hot = swap ? idx[0] : idx[idx.length-1];
+    return lines.map((l,i)=> i===hot ? Or(l) : W(l)).join("<br>");
+  }
+  const words=text.trim().split(/\s+/);
+  if(words.length<2) return W(text);       // single word: leave white
+  const k=Math.max(1, Math.ceil(words.length*0.4));
+  if(swap){ return Or(words.slice(0,k).join(" "))+" "+W(words.slice(k).join(" ")); }
+  return W(words.slice(0,words.length-k).join(" "))+" "+Or(words.slice(words.length-k).join(" "));
+}
+function colorize(){
+  const t=state.text.trim();
+  if(!t) return '<span style="opacity:.35">Quote or describe what you’re looking for</span>';
+  if(t.includes("*")) return fmt(t);                     // manual override
+  if(!state.twoTone) return W(t).replace(/\n/g,"<br>");  // plain white while typing
+  return twoTone(t, state.swap);
+}
 
 function render(){
   const t=state.text.trim(), attr=state.attr.trim(), bg=state.bg;
@@ -114,8 +141,6 @@ function render(){
   const scrim = `<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.86) 26%,rgba(0,0,0,.3) 50%,transparent 66%);z-index:3"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,transparent 20%);z-index:3"></div>
     <div style="position:absolute;top:0;left:0;width:6px;height:100%;background:${O};z-index:10"></div>`;
-  const shownText = t || "Quote or describe what you're looking for";
-  const textColor = t ? "" : "opacity:.35;";
   const attrRow = `<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:32px">
       <div style="flex:1">${attr?`<div class="mono" style="font-size:1.7rem;color:${O};line-height:1.2">${esc(attr)}</div>`:''}</div>
       <img src="${LOGO}" style="height:46px;flex-shrink:0">
@@ -124,7 +149,7 @@ function render(){
     <img src="${RAVEN}" style="position:absolute;top:48px;left:52px;height:118px;z-index:10;opacity:.95">
     <div style="position:absolute;bottom:72px;left:0;right:0;padding:0 68px;z-index:10">
       <div style="font-family:Anton;font-size:8rem;line-height:.6;color:${O};margin-bottom:14px">&ldquo;</div>
-      <div style="font-family:Anton;text-transform:uppercase;font-size:${fontRem(t)}rem;line-height:.98;color:${WHITE};${textColor}">${fmt(shownText)}</div>
+      <div style="font-family:Anton;text-transform:uppercase;font-size:${fontRem(t)}rem;line-height:.98">${colorize()}</div>
       <div style="width:72px;height:5px;background:${O};margin-top:30px"></div>
       ${attrRow}
     </div>`;
@@ -156,8 +181,10 @@ async function onExport(){
 }
 
 function bind(){
-  $("#text").addEventListener("input",e=>{state.text=e.target.value;render();});
+  $("#text").addEventListener("input",e=>{state.text=e.target.value;state.twoTone=false;render();});
+  $("#text").addEventListener("blur",()=>{state.twoTone=true;render();});
   $("#attr").addEventListener("input",e=>{state.attr=e.target.value;render();});
+  $("#flipBtn").onclick=()=>{state.twoTone=true;state.swap=!state.swap;render();};
   $("#upBtn").onclick=()=>$("#file").click();
   $("#file").onchange=onUpload;
   $("#genBtn").onclick=onGenerate;
