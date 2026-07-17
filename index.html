@@ -9,37 +9,36 @@
 :root{--o:#EC6328;--bg:#0b0b0c;--panel:#151517;--line:#2a2a2e;--ash:#8A8580;--body:#D3CEC5}
 body{font-family:'Archivo',sans-serif;background:var(--bg);color:#fff;-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer;border:0}
-input,textarea,select{font-family:inherit}
+input,textarea{font-family:inherit}
 .mono{font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.12em}
 #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .card{background:var(--panel);border:1px solid var(--line);padding:40px;width:100%;max-width:400px}
 .card img{height:40px;margin-bottom:26px}
 .card h1{font-family:'Anton';font-size:1.7rem;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px}
 .card p{color:var(--ash);font-size:.95rem;margin-bottom:24px}
-.field{margin-bottom:16px}
+.field{margin-bottom:18px}
 .field label{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ash);margin-bottom:7px}
-.field input,.field textarea,.field select{width:100%;background:#0f0f11;border:1px solid var(--line);color:#fff;padding:12px 14px;font-size:.95rem}
-.field textarea{resize:vertical;min-height:72px}
+.field input,.field textarea{width:100%;background:#0f0f11;border:1px solid var(--line);color:#fff;padding:12px 14px;font-size:.95rem}
+.field textarea{resize:vertical;min-height:96px;line-height:1.4}
+.tip{color:var(--ash);font-size:.72rem;margin-top:6px;line-height:1.4}
+.sec{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--o);margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .btn{background:var(--o);color:#000;font-weight:800;padding:13px 18px;letter-spacing:.04em;text-transform:uppercase;font-size:.85rem;width:100%}
-.btn.sm{width:auto;padding:10px 16px;font-size:.72rem}
+.btn.sm{width:auto;padding:11px 15px;font-size:.72rem}
 .btn.ghost{background:transparent;color:#fff;border:1px solid var(--line)}
 .err{color:#ff6a4d;font-size:.85rem;margin-top:12px;min-height:1em}
-#app{display:none;grid-template-columns:340px 1fr;height:100vh}
-#side{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:20px}
-#side .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.row{display:flex;gap:8px}
+#app{display:none;grid-template-columns:360px 1fr;height:100vh}
+#side{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:22px}
+#side .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 #side .top img{height:26px}
-.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
-.tab{background:#0f0f11;border:1px solid var(--line);color:var(--body);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:8px 11px}
-.tab.on{background:var(--o);color:#000;font-weight:700;border-color:var(--o)}
-#stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;overflow:auto;padding:24px;background:#050506}
+#stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;overflow:auto;padding:24px;background:#050506}
 #wrap{box-shadow:0 20px 60px rgba(0,0,0,.6);transform-origin:top center}
 #canvas{width:1080px;height:1350px;position:relative;overflow:hidden;background:#000;font-family:'Archivo',sans-serif}
-.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-.hint{color:var(--ash);font-size:.78rem;text-align:center;max-width:420px;line-height:1.5}
+.hint{color:var(--ash);font-size:.78rem;text-align:center;max-width:440px;line-height:1.5}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.35);border-top-color:#000;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px}
 @keyframes s{to{transform:rotate(360deg)}}
-.divider{height:1px;background:var(--line);margin:18px 0}
-small.note{display:block;color:var(--ash);font-size:.72rem;margin-top:6px;line-height:1.4}
+.divider{height:1px;background:var(--line);margin:20px 0}
+small.note{display:block;color:var(--ash);font-size:.72rem;margin-top:8px;line-height:1.4}
 </style></head><body>
 
 <div id="login">
@@ -57,15 +56,40 @@ small.note{display:block;color:var(--ash);font-size:.72rem;margin-top:6px;line-h
 <div id="app">
   <div id="side">
     <div class="top"><img src="./logo.png"><button class="btn sm ghost" id="signout">Sign out</button></div>
-    <div class="tabs" id="tabs"></div>
-    <form id="form"></form>
+
+    <div class="sec">Text</div>
+    <div class="field">
+      <label>Your words</label>
+      <textarea id="text" placeholder="Quote or describe what you're looking for&hellip;"></textarea>
+      <div class="tip">Tip: wrap words in *asterisks* to make them orange.</div>
+    </div>
+    <div class="field">
+      <label>Credit / sub-line (optional)</label>
+      <input id="attr" placeholder="&mdash; Name, or a short tagline">
+    </div>
+
+    <div class="sec">Background &mdash; upload or generate</div>
+    <div class="field">
+      <button type="button" class="btn sm ghost" id="upBtn">Upload Photo</button>
+      <input type="file" id="file" accept="image/*" hidden>
+    </div>
+    <div class="field">
+      <label>Describe an image to generate</label>
+      <textarea id="genPrompt" placeholder="e.g. a lone raven on a mountain crag at dusk" style="min-height:72px"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="btn sm" id="genBtn">Generate Image</button>
+        <button type="button" class="btn sm ghost" id="clearBg">Clear</button>
+      </div>
+      <div class="tip">Generated images are auto-styled to the FlockFam look.</div>
+    </div>
+
     <div class="divider"></div>
     <button class="btn" id="exportBtn">Download PNG</button>
-    <small class="note">Exports at 1080&times;1350 (4:5) — Instagram &amp; Facebook safe.</small>
+    <small class="note">Exports at 1080&times;1350 (4:5) &mdash; Instagram &amp; Facebook safe.</small>
   </div>
+
   <div id="stage">
     <div id="wrap"><div id="canvas"></div></div>
-    <div class="actions" id="stageActions"></div>
     <div class="hint" id="hint"></div>
   </div>
 </div>
@@ -75,160 +99,78 @@ const SUPABASE_URL="https://bwnwvbdzeqgxdmsrkand.supabase.co", SUPABASE_KEY="sb_
 const LOGO="./logo.png", RAVEN="./raven.png";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const O="#EC6328", WHITE="#fff", ASH="#8A8580", BODY="#D3CEC5";
-
-function scrims(){return `
-  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.97) 0%,rgba(0,0,0,.9) 24%,rgba(0,0,0,.3) 46%,transparent 62%);z-index:3"></div>
-  <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,transparent 20%);z-index:3"></div>
-  <div style="position:absolute;top:0;left:0;width:6px;height:100%;background:${O};z-index:10"></div>`;}
-function bgLayer(url,filter){return url?`<div style="position:absolute;inset:0;background:url('${url}') center/cover no-repeat;filter:${filter||'none'};z-index:1"></div>`
-  :`<div style="position:absolute;inset:0;background:#101012;z-index:1"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#333;font-family:Space Mono,monospace;font-size:1.1rem;z-index:2">ADD A PHOTO OR GENERATE A SCENE</div>`;}
-function logoFooter(){return `<div style="position:absolute;bottom:46px;left:0;right:0;display:flex;justify-content:center;z-index:10"><img src="${LOGO}" crossorigin="anonymous" style="height:48px"></div>`;}
-
-const TEMPLATES={
-  quote:{name:"Quote",
-    fields:[
-      {k:"quoteWhite",label:"Quote (white part)",type:"textarea",def:"In every walk with nature, one receives far "},
-      {k:"quoteOrange",label:"Quote punchline (orange)",type:"text",def:"more than he seeks."},
-      {k:"attribution",label:"Attribution",type:"text",def:"— John Muir"},
-      {k:"attributionSub",label:"Sub-attribution",type:"text",def:"Naturalist · Conservationist"},
-    ],
-    bg:"photo",bgFilter:"grayscale(.5) brightness(.85) contrast(1.1)",
-    render(f,bg){return `${bgLayer(bg,this.bgFilter)}${scrims()}
-      <img src="${RAVEN}" crossorigin="anonymous" style="position:absolute;top:48px;left:52px;height:120px;z-index:10;opacity:.95">
-      <div style="position:absolute;bottom:72px;left:0;right:0;padding:0 68px;z-index:10">
-        <div style="font-family:Anton;font-size:9rem;line-height:.7;color:${O};margin-bottom:16px">&ldquo;</div>
-        <div style="font-family:Anton;text-transform:uppercase;font-size:4.6rem;line-height:.95;margin-bottom:44px">
-          <span style="color:${WHITE}">${esc(f.quoteWhite)}</span><span style="color:${O}">${esc(f.quoteOrange)}</span></div>
-        <div style="width:72px;height:5px;background:${O};margin-bottom:34px"></div>
-        <div style="display:flex;align-items:flex-end;justify-content:space-between">
-          <div><div class="mono" style="font-size:1.9rem;color:${O};margin-bottom:10px">${esc(f.attribution)}</div>
-          <div style="font-size:1.6rem;color:${ASH}">${esc(f.attributionSub)}</div></div>
-          <div class="mono" style="font-size:1.45rem"><span style="color:${O}">Get</span> <span style="color:${WHITE}">Outdoors.</span></div>
-        </div></div>`;}},
-
-  location:{name:"Get Outdoors",
-    fields:[
-      {k:"location",label:"Location",type:"text",def:"Estes Park, Co."},
-      {k:"date",label:"Date",type:"text",def:"6.27.26"},
-    ],
-    bg:"photo",bgFilter:"brightness(.85) contrast(1.05) saturate(.9)",
-    render(f,bg){return `${bgLayer(bg,this.bgFilter)}${scrims()}
-      <img src="${RAVEN}" crossorigin="anonymous" style="position:absolute;top:48px;left:52px;height:120px;z-index:10;opacity:.95">
-      <div style="position:absolute;bottom:80px;left:0;right:0;padding:0 68px;z-index:10">
-        <div style="font-family:Anton;font-size:7.8rem;line-height:.88;text-transform:uppercase;margin-bottom:30px">
-          <span style="color:${O}">GET</span><br><span style="color:${WHITE}">OUTDOORS</span></div>
-        <div style="width:72px;height:5px;background:${O};margin-bottom:26px"></div>
-        <div style="display:flex;align-items:flex-end;justify-content:space-between">
-          <div><div class="mono" style="font-size:1.9rem;color:${O};margin-bottom:10px">${esc(f.location)}</div>
-          <div class="mono" style="font-size:1.5rem;color:${ASH};letter-spacing:.16em">${esc(f.date)}</div></div>
-          <img src="${LOGO}" crossorigin="anonymous" style="height:44px;opacity:.9"></div>
-      </div>`;}},
-
-  sms:{name:"SMS Signup",
-    fields:[
-      {k:"headWhite",label:"Headline (white)",type:"text",def:"Join The "},
-      {k:"headOrange",label:"Headline (orange)",type:"text",def:"Flock."},
-      {k:"sub",label:"Subline",type:"textarea",def:"Never miss a drop. Be first to every release, restock & deal."},
-      {k:"kw",label:"Keyword",type:"text",def:"JOIN"},
-      {k:"phone",label:"Phone number",type:"text",def:"833.912.5305"},
-    ],
-    bg:"ai",bgFilter:"none",aiPrompt:"Cinematic vertical plate, NO text. A powerful black raven flying directly toward camera, wings spread wide, burnt-orange #EC6328 rim-light and glow, heavy dark vignette, faint bone/orange topographic contour lines, drifting embers and mist, deep charcoal-black background. Palette only black, bone, burnt-orange - no blue or teal. Two wings, correct anatomy. Lower third falls to near-black.",
-    render(f,bg){return `${bgLayer(bg,this.bgFilter)}
-      <div style="position:absolute;inset:0;box-shadow:inset 0 0 340px 120px rgba(0,0,0,.9);z-index:2"></div>${scrims()}
-      <img src="${RAVEN}" crossorigin="anonymous" style="position:absolute;top:44px;left:48px;height:96px;z-index:10;opacity:.95">
-      <div style="position:absolute;bottom:70px;left:0;right:0;padding:0 60px;z-index:10">
-        <div style="font-family:Anton;font-size:6rem;line-height:.9;text-transform:uppercase;margin-bottom:20px">
-          <span style="color:${WHITE}">${esc(f.headWhite)}</span><span style="color:${O}">${esc(f.headOrange)}</span></div>
-        <div style="font-weight:600;font-size:2.05rem;line-height:1.25;color:${BODY};margin-bottom:32px">${esc(f.sub)}</div>
-        <div style="background:${O};padding:26px 30px;margin-bottom:22px">
-          <div class="mono" style="font-weight:700;font-size:1.72rem;color:#000">Text &ldquo;${esc(f.kw)}&rdquo; to</div>
-          <div style="font-family:Anton;font-size:4.85rem;line-height:.98;color:#000">${esc(f.phone)}</div></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:24px">
-          <img src="${LOGO}" crossorigin="anonymous" style="height:44px;flex-shrink:0">
-          <div class="mono" style="font-size:1.25rem;color:${ASH};white-space:nowrap;letter-spacing:.02em">Msg &amp; data rates may apply. Reply STOP to opt out.</div></div>
-      </div>`;}},
-
-  announce:{name:"Announcement",
-    fields:[
-      {k:"eyebrow",label:"Eyebrow",type:"text",def:"The Flock Returns"},
-      {k:"big1",label:"Big line 1 (white)",type:"text",def:"We're"},
-      {k:"big2",label:"Big line 2 (orange)",type:"text",def:"Back."},
-      {k:"sub",label:"Subline",type:"textarea",def:"New home, new gear, same flock."},
-    ],
-    bg:"none",bgFilter:"none",
-    render(f){return `<div style="position:absolute;inset:0;background:#000;z-index:1"></div>
-      <div style="position:absolute;top:0;left:0;width:6px;height:100%;background:${O};z-index:10"></div>
-      <img src="${RAVEN}" crossorigin="anonymous" style="position:absolute;top:150px;left:50%;transform:translateX(-50%);height:170px;z-index:10;opacity:.97">
-      <div style="position:absolute;top:470px;left:0;right:0;text-align:center;padding:0 60px;z-index:10">
-        <div class="mono" style="font-size:1.7rem;color:${O};letter-spacing:.26em;margin-bottom:26px">${esc(f.eyebrow)}</div>
-        <div style="font-family:Anton;font-size:9rem;line-height:.86;text-transform:uppercase">
-          <span style="color:${WHITE}">${esc(f.big1)}</span><br><span style="color:${O}">${esc(f.big2)}</span></div>
-        <div style="font-weight:500;font-size:2rem;line-height:1.42;color:${BODY};margin-top:38px">${esc(f.sub)}</div>
-      </div>${logoFooter()}`;}},
-};
+const $=s=>document.querySelector(s);
+const state={text:"", attr:"", bg:""};
 
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function fmt(s){return esc(s).replace(/\*([^*]+)\*/g,'<span style="color:'+O+'">$1</span>').replace(/\n/g,"<br>");}
+function fontRem(t){const n=(t||"").length; if(n<=34)return 5.6; if(n<=64)return 4.6; if(n<=110)return 3.7; if(n<=170)return 3.0; if(n<=240)return 2.5; return 2.1;}
 
-let cur="quote", fields={}, bgUrl={};
-const $=s=>document.querySelector(s);
+function render(){
+  const t=state.text.trim(), attr=state.attr.trim(), bg=state.bg;
+  const bgHtml = bg
+    ? `<div style="position:absolute;inset:0;background:url('${bg}') center/cover no-repeat;filter:brightness(.8) contrast(1.05);z-index:1"></div>`
+    : `<div style="position:absolute;inset:0;background:#0a0a0b;z-index:1"></div>`;
+  const scrim = `<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.86) 26%,rgba(0,0,0,.3) 50%,transparent 66%);z-index:3"></div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,transparent 20%);z-index:3"></div>
+    <div style="position:absolute;top:0;left:0;width:6px;height:100%;background:${O};z-index:10"></div>`;
+  const shownText = t || "Quote or describe what you're looking for";
+  const textColor = t ? "" : "opacity:.35;";
+  const attrRow = `<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:32px">
+      <div style="flex:1">${attr?`<div class="mono" style="font-size:1.7rem;color:${O};line-height:1.2">${esc(attr)}</div>`:''}</div>
+      <img src="${LOGO}" style="height:46px;flex-shrink:0">
+    </div>`;
+  $("#canvas").innerHTML = `${bgHtml}${scrim}
+    <img src="${RAVEN}" style="position:absolute;top:48px;left:52px;height:118px;z-index:10;opacity:.95">
+    <div style="position:absolute;bottom:72px;left:0;right:0;padding:0 68px;z-index:10">
+      <div style="font-family:Anton;font-size:8rem;line-height:.6;color:${O};margin-bottom:14px">&ldquo;</div>
+      <div style="font-family:Anton;text-transform:uppercase;font-size:${fontRem(t)}rem;line-height:.98;color:${WHITE};${textColor}">${fmt(shownText)}</div>
+      <div style="width:72px;height:5px;background:${O};margin-top:30px"></div>
+      ${attrRow}
+    </div>`;
+}
 
-function loadFields(t){fields={};TEMPLATES[t].fields.forEach(f=>fields[f.k]=f.def);}
-function renderCanvas(){const t=TEMPLATES[cur];$("#canvas").innerHTML=t.render(fields,bgUrl[cur]||"");}
-function buildForm(){
-  const t=TEMPLATES[cur];let h="";
-  t.fields.forEach(f=>{
-    h+=`<div class="field"><label>${f.label}</label>`;
-    h+= f.type==="textarea"?`<textarea data-k="${f.k}">${fields[f.k]}</textarea>`:`<input data-k="${f.k}" value="${(fields[f.k]||'').replace(/"/g,'&quot;')}">`;
-    h+=`</div>`;});
-  $("#form").innerHTML=h;
-  $("#form").querySelectorAll("[data-k]").forEach(el=>el.addEventListener("input",e=>{fields[e.target.dataset.k]=e.target.value;renderCanvas();}));
-  let a="";
-  if(t.bg==="photo") a=`<button type="button" class="btn sm" id="upBtn">Upload Photo</button><input type="file" id="file" accept="image/*" hidden>`;
-  if(t.bg==="ai") a=`<button type="button" class="btn sm" id="aiBtn">Generate Raven Scene</button><button type="button" class="btn sm ghost" id="upBtn">Upload Instead</button><input type="file" id="file" accept="image/*" hidden>`;
-  $("#stageActions").innerHTML=a;
-  if($("#upBtn")){$("#upBtn").onclick=()=>$("#file").click();$("#file").onchange=onUpload;}
-  if($("#aiBtn")) $("#aiBtn").onclick=onGenerate;
-  $("#hint").textContent = t.bg==="ai"?"Generate a Seedream raven scene, or upload your own image.":t.bg==="photo"?"Upload a photo for the background.":"";
-}
-function buildTabs(){
-  $("#tabs").innerHTML=Object.keys(TEMPLATES).map(k=>`<button type="button" class="tab ${k===cur?'on':''}" data-t="${k}">${TEMPLATES[k].name}</button>`).join("");
-  $("#tabs").querySelectorAll(".tab").forEach(b=>b.onclick=()=>{cur=b.dataset.t;loadFields(cur);buildTabs();buildForm();renderCanvas();});
-}
-function fitCanvas(){const stage=$("#stage");const scale=Math.min((stage.clientWidth-48)/1080,(stage.clientHeight-140)/1350,0.62);$("#wrap").style.transform=`scale(${scale})`;$("#wrap").style.height=(1350*scale)+"px";$("#wrap").style.width=(1080*scale)+"px";}
-
-function onUpload(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{bgUrl[cur]=reader.result;renderCanvas();};
-  reader.readAsDataURL(file);
-}
+/* actions */
+function onUpload(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{state.bg=r.result;render();};r.readAsDataURL(f);}
 async function onGenerate(){
-  setBusy("#aiBtn","Generating…");
-  const t=TEMPLATES[cur];
-  const {data,error}=await sb.functions.invoke("generate-plate",{body:{prompt:t.aiPrompt,width:1080,height:1350}});
-  if(error||!data||data.error){alert("Generation failed: "+((data&&data.error)||(error&&error.message)||"unknown"));unbusy("#aiBtn","Generate Raven Scene");return;}
-  bgUrl[cur]=data.imageUrl;renderCanvas();unbusy("#aiBtn","Generate Raven Scene");
+  const desc=$("#genPrompt").value.trim();
+  if(!desc){alert("Describe the image you want to generate first.");return;}
+  setBusy("#genBtn","Generating…");$("#hint").textContent="Generating your image — about 20-30 seconds…";
+  const prompt=desc+". FlockFam brand style: cinematic, deep charcoal-black background, burnt-orange #EC6328 accents, bone/off-white highlights, dramatic dark vignette, premium rugged outdoor aesthetic, no blue or teal, no text.";
+  try{
+    const {data,error}=await sb.functions.invoke("generate-plate",{body:{prompt}});
+    if(error||!data||data.error){alert("Generation failed: "+((data&&data.error)||(error&&error.message)||"unknown"));}
+    else{state.bg=data.imageUrl;render();}
+  }catch(err){alert("Generation failed: "+err.message);}
+  setBusy("#genBtn","Generate Image",true);$("#hint").textContent="";
 }
-function setBusy(sel,txt){const b=$(sel);if(b){b.dataset.old=b.textContent;b.innerHTML=`<span class="spin"></span>${txt}`;b.disabled=true;}}
-function unbusy(sel,txt){const b=$(sel);if(b){b.textContent=txt;b.disabled=false;}}
+function setBusy(sel,txt,done){const b=$(sel);if(!b)return;if(done){b.textContent=txt;b.disabled=false;}else{b.innerHTML=`<span class="spin"></span>${txt}`;b.disabled=true;}}
 
 async function onExport(){
-  const node=$("#canvas");
   setBusy("#exportBtn","Rendering…");
   try{
-    const url=await htmlToImage.toPng(node,{width:1080,height:1350,pixelRatio:1,cacheBust:true});
-    const a=document.createElement("a");a.download=`flockfam_${cur}_${Date.now()}.png`;a.href=url;a.click();
-  }catch(err){alert("Export failed: "+err.message+"\n\nIf a background image was just generated, give it a second to load, then try again.");}
-  unbusy("#exportBtn","Download PNG");
+    const url=await htmlToImage.toPng($("#canvas"),{width:1080,height:1350,pixelRatio:1,cacheBust:true});
+    const a=document.createElement("a");a.download=`flockfam_post_${Date.now()}.png`;a.href=url;a.click();
+  }catch(err){alert("Export failed: "+err.message);}
+  setBusy("#exportBtn","Download PNG",true);
 }
 
-async function showApp(){$("#login").style.display="none";$("#app").style.display="grid";
-  buildTabs();loadFields(cur);buildForm();renderCanvas();fitCanvas();}
+function bind(){
+  $("#text").addEventListener("input",e=>{state.text=e.target.value;render();});
+  $("#attr").addEventListener("input",e=>{state.attr=e.target.value;render();});
+  $("#upBtn").onclick=()=>$("#file").click();
+  $("#file").onchange=onUpload;
+  $("#genBtn").onclick=onGenerate;
+  $("#clearBg").onclick=()=>{state.bg="";render();};
+  $("#exportBtn").addEventListener("click",onExport);
+}
+function fit(){const s=$("#stage");const sc=Math.min((s.clientWidth-48)/1080,(s.clientHeight-90)/1350,0.62);$("#wrap").style.transform=`scale(${sc})`;$("#wrap").style.height=(1350*sc)+"px";$("#wrap").style.width=(1080*sc)+"px";}
+
+async function showApp(){$("#login").style.display="none";$("#app").style.display="grid";bind();render();fit();}
 $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginErr").textContent="";
   const {error}=await sb.auth.signInWithPassword({email:$("#email").value,password:$("#password").value});
   if(error){$("#loginErr").textContent=error.message;return;}showApp();});
 $("#signout").addEventListener("click",async()=>{await sb.auth.signOut();location.reload();});
-$("#exportBtn").addEventListener("click",onExport);
-window.addEventListener("resize",fitCanvas);
+window.addEventListener("resize",fit);
 (async()=>{const {data}=await sb.auth.getSession();if(data.session)showApp();})();
 </script></body></html>
