@@ -61,10 +61,14 @@ small.note{display:block;color:var(--ash);font-size:.72rem;margin-top:8px;line-h
     <div class="field">
       <label>Your words</label>
       <textarea id="text" placeholder="Quote or describe what you're looking for&hellip;"></textarea>
-      <div class="row" style="margin-top:8px">
-        <button type="button" class="btn sm ghost" id="flipBtn">&#8646; Flip orange</button>
+      <div style="margin-top:12px">
+        <label style="font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Orange split &mdash; drag to place</label>
+        <input type="range" id="splitRange" min="0" max="0" value="0" step="1" style="width:100%;margin-top:8px;accent-color:var(--o);cursor:pointer">
       </div>
-      <div class="tip">The orange half fills in automatically when you click out of the box. Hit Flip to swap which part is orange.</div>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="btn sm ghost" id="flipBtn">&#8646; Flip colors</button>
+      </div>
+      <div class="tip">Orange fills in automatically when you click out of the box. Drag the slider to set the split exactly (e.g. OUT|DOORS), or Flip to swap sides.</div>
     </div>
     <div class="field">
       <label>Credit / sub-line (optional)</label>
@@ -103,45 +107,42 @@ const LOGO="./logo.png", RAVEN="./raven.png";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const O="#EC6328", WHITE="#fff", ASH="#8A8580", BODY="#D3CEC5";
 const $=s=>document.querySelector(s);
-const state={text:"", attr:"", bg:"", twoTone:false, swap:false};
+const state={text:"", attr:"", bg:"", twoTone:false, swap:false, manual:null};
 
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-function W(s){return '<span style="color:'+WHITE+'">'+esc(s)+'</span>';}
-function Or(s){return '<span style="color:'+O+'">'+esc(s)+'</span>';}
+function W(s){return s?'<span style="color:'+WHITE+'">'+esc(s).replace(/\n/g,"<br>")+'</span>':'';}
+function Or(s){return s?'<span style="color:'+O+'">'+esc(s).replace(/\n/g,"<br>")+'</span>':'';}
 function fmt(s){return esc(s).replace(/\*([^*]+)\*/g,'<span style="color:'+O+'">$1</span>').replace(/\n/g,"<br>");}
 function fontRem(t){const n=(t||"").length; if(n<=34)return 5.6; if(n<=64)return 4.6; if(n<=110)return 3.7; if(n<=170)return 3.0; if(n<=240)return 2.5; return 2.1;}
 
-// Known mashed-together words -> where the color splits (length of the first part). Add more anytime.
+// Smart default for where orange starts (a character index into the full text). The slider overrides this.
 const SPLITS={OUTDOORS:3, FLOCKFAM:5, BACKCOUNTRY:4, OVERLAND:4, OFFGRID:3, OFFROAD:3, DOWNHILL:4,
   TRAILHEAD:5, CAMPFIRE:4, WILDLIFE:4, SUNRISE:3, SUNSET:3, DAYBREAK:3, NIGHTFALL:5, MOUNTAINSIDE:8};
-function wordSplit(w){ return SPLITS[w.toUpperCase()] || -1; }
-
-// Auto white/orange split, applied once the user finishes typing.
-function twoTone(text, swap){
-  const lines=text.split("\n");
-  const idx=[]; lines.forEach((l,i)=>{ if(l.trim()) idx.push(i); });
-  if(idx.length>=2){                      // multi-line: orange one whole line
-    const hot = swap ? idx[0] : idx[idx.length-1];
-    return lines.map((l,i)=> i===hot ? Or(l) : W(l)).join("<br>");
+function autoSplit(t){
+  const lines=t.split("\n"); const starts=[]; let off=0;
+  for(let i=0;i<lines.length;i++){starts.push(off);off+=lines[i].length+1;}
+  const ne=[]; lines.forEach((l,i)=>{if(l.trim())ne.push(i);});
+  if(ne.length>=2) return starts[ne[ne.length-1]];       // multi-line: start of last line
+  const w=t.trim(); if(!w) return 0; const base=t.indexOf(w);
+  const words=w.split(/\s+/);
+  if(words.length>=2){                                    // phrase: last ~40% of words
+    const k=Math.max(1,Math.ceil(words.length*0.4));
+    return base+words.slice(0,words.length-k).join(" ").length+1;
   }
-  const words=text.trim().split(/\s+/);
-  if(words.length<2){                       // single word
-    const w=text.trim();
-    if(w.length<2) return W(w);
-    let c=wordSplit(w);                       // known word (OUTDOORS -> OUT|DOORS)?
-    if(c<0) c=Math.ceil(w.length/2);          // otherwise split down the middle
-    return swap ? W(w.slice(0,c))+Or(w.slice(c)) : Or(w.slice(0,c))+W(w.slice(c));
-  }
-  const k=Math.max(1, Math.ceil(words.length*0.4));
-  if(swap){ return Or(words.slice(0,k).join(" "))+" "+W(words.slice(k).join(" ")); }
-  return W(words.slice(0,words.length-k).join(" "))+" "+Or(words.slice(words.length-k).join(" "));
+  const known=SPLITS[w.toUpperCase()];                    // single word
+  if(known) return base+known;
+  if(w.length<2) return t.length;
+  return base+Math.ceil(w.length/2);
 }
+function splitIndex(){ return state.manual!=null ? state.manual : autoSplit(state.text); }
 function colorize(){
-  const t=state.text.trim();
-  if(!t) return '<span style="opacity:.35">Quote or describe what you’re looking for</span>';
-  if(t.includes("*")) return fmt(t);                     // manual override
-  if(!state.twoTone) return W(t).replace(/\n/g,"<br>");  // plain white while typing
-  return twoTone(t, state.swap);
+  const t=state.text;
+  if(!t.trim()) return '<span style="opacity:.35">Quote or describe what you’re looking for</span>';
+  if(t.includes("*")) return fmt(t);                      // *asterisk* manual override
+  if(!state.twoTone) return W(t);                         // plain white while typing
+  let i=Math.max(0,Math.min(splitIndex(),t.length));
+  const a=t.slice(0,i), b=t.slice(i);
+  return state.swap ? Or(a)+W(b) : W(a)+Or(b);
 }
 
 function render(){
@@ -192,8 +193,10 @@ async function onExport(){
 }
 
 function bind(){
-  $("#text").addEventListener("input",e=>{state.text=e.target.value;state.twoTone=false;render();});
-  $("#text").addEventListener("blur",()=>{state.twoTone=true;render();});
+  const rng=$("#splitRange");
+  $("#text").addEventListener("input",e=>{state.text=e.target.value;state.twoTone=false;state.manual=null;rng.max=state.text.length;render();});
+  $("#text").addEventListener("blur",()=>{state.twoTone=true;if(state.manual==null)rng.value=autoSplit(state.text);render();});
+  rng.addEventListener("input",e=>{state.manual=parseInt(e.target.value)||0;state.twoTone=true;render();});
   $("#attr").addEventListener("input",e=>{state.attr=e.target.value;render();});
   $("#flipBtn").onclick=()=>{state.twoTone=true;state.swap=!state.swap;render();};
   $("#upBtn").onclick=()=>$("#file").click();
