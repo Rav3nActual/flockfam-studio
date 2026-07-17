@@ -120,7 +120,12 @@ function twoTone(text, swap){
     return lines.map((l,i)=> i===hot ? Or(l) : W(l)).join("<br>");
   }
   const words=text.trim().split(/\s+/);
-  if(words.length<2) return W(text);       // single word: leave white
+  if(words.length<2){                       // single word: split the letters
+    const w=text.trim();
+    if(w.length<2) return W(w);
+    const c=Math.ceil(w.length/2);
+    return swap ? Or(w.slice(0,c))+W(w.slice(c)) : W(w.slice(0,c))+Or(w.slice(c));
+  }
   const k=Math.max(1, Math.ceil(words.length*0.4));
   if(swap){ return Or(words.slice(0,k).join(" "))+" "+W(words.slice(k).join(" ")); }
   return W(words.slice(0,words.length-k).join(" "))+" "+Or(words.slice(words.length-k).join(" "));
