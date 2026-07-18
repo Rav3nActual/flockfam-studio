@@ -25,16 +25,21 @@ input,textarea{font-family:inherit}
 .btn{background:var(--o);color:#000;font-weight:800;padding:13px 18px;letter-spacing:.04em;text-transform:uppercase;font-size:.85rem;width:100%}
 .btn.sm{width:auto;padding:11px 15px;font-size:.72rem}
 .btn.ghost{background:transparent;color:#fff;border:1px solid var(--line)}
+.btn.tiny{width:auto;padding:7px 12px;font-size:.66rem;background:transparent;color:var(--ash);border:1px solid var(--line)}
 .err{color:#ff6a4d;font-size:.85rem;margin-top:12px;min-height:1em}
 .row{display:flex;gap:8px}
 #app{display:none;grid-template-columns:360px 1fr;height:100vh}
 #side{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:22px}
 #side .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 #side .top img{height:26px}
-#stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;overflow:auto;padding:24px;background:#050506}
+#stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;overflow:auto;padding:20px;background:#050506}
+#slides{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;max-width:90%}
+.chip{background:#141416;border:1px solid var(--line);color:var(--body);font-family:'Space Mono',monospace;font-size:.8rem;padding:9px 14px;min-width:40px;text-align:center}
+.chip.on{background:var(--o);color:#000;border-color:var(--o);font-weight:700}
+.chip.add{color:var(--ash);letter-spacing:.1em}
 #wrap{box-shadow:0 20px 60px rgba(0,0,0,.6);transform-origin:top center}
 #canvas{width:1080px;height:1350px;position:relative;overflow:hidden;background:#000;font-family:'Archivo',sans-serif}
-.hint{color:var(--ash);font-size:.78rem;text-align:center;max-width:440px;line-height:1.5}
+.hint{color:var(--ash);font-size:.78rem;text-align:center;max-width:440px;line-height:1.5;min-height:1em}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.35);border-top-color:#000;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px}
 @keyframes s{to{transform:rotate(360deg)}}
 .divider{height:1px;background:var(--line);margin:20px 0}
@@ -65,10 +70,8 @@ small.note{display:block;color:var(--ash);font-size:.72rem;margin-top:8px;line-h
         <label style="font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Orange split &mdash; drag to place</label>
         <input type="range" id="splitRange" min="0" max="0" value="0" step="1" style="width:100%;margin-top:8px;accent-color:var(--o);cursor:pointer">
       </div>
-      <div class="row" style="margin-top:8px">
-        <button type="button" class="btn sm ghost" id="flipBtn">&#8646; Flip colors</button>
-      </div>
-      <div class="tip">Orange fills in automatically when you click out of the box. Drag the slider to set the split exactly (e.g. OUT|DOORS), or Flip to swap sides.</div>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn sm ghost" id="flipBtn">&#8646; Flip colors</button></div>
+      <div class="tip">Orange fills in automatically when you click out. Drag the slider to set the split (e.g. OUT|DOORS), or Flip to swap sides.</div>
     </div>
     <div class="field">
       <label>Credit / sub-line (optional)</label>
@@ -91,11 +94,16 @@ small.note{display:block;color:var(--ash);font-size:.72rem;margin-top:8px;line-h
     </div>
 
     <div class="divider"></div>
-    <button class="btn" id="exportBtn">Download PNG</button>
+    <button class="btn" id="exportBtn">Download this slide</button>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm ghost" id="exportAll" style="flex:1;display:none">Download all</button>
+      <button class="btn tiny" id="delSlide" style="display:none">Delete slide</button>
+    </div>
     <small class="note">Exports at 1080&times;1350 (4:5) &mdash; Instagram &amp; Facebook safe.</small>
   </div>
 
   <div id="stage">
+    <div id="slides"></div>
     <div id="wrap"><div id="canvas"></div></div>
     <div class="hint" id="hint"></div>
   </div>
@@ -107,7 +115,10 @@ const LOGO="./logo.png", RAVEN="./raven.png";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const O="#EC6328", WHITE="#fff", ASH="#8A8580", BODY="#D3CEC5";
 const $=s=>document.querySelector(s);
-const state={text:"", attr:"", bg:"", twoTone:false, swap:false, manual:null};
+
+function newSlide(){return {text:"", attr:"", bg:"", genPrompt:"", swap:false, manual:null, twoTone:false};}
+const state={slides:[newSlide()], cur:0};
+const S=()=>state.slides[state.cur];
 
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function W(s){return s?'<span style="color:'+WHITE+'">'+esc(s).replace(/\n/g,"<br>")+'</span>':'';}
@@ -115,38 +126,32 @@ function Or(s){return s?'<span style="color:'+O+'">'+esc(s).replace(/\n/g,"<br>"
 function fmt(s){return esc(s).replace(/\*([^*]+)\*/g,'<span style="color:'+O+'">$1</span>').replace(/\n/g,"<br>");}
 function fontRem(t){const n=(t||"").length; if(n<=34)return 5.6; if(n<=64)return 4.6; if(n<=110)return 3.7; if(n<=170)return 3.0; if(n<=240)return 2.5; return 2.1;}
 
-// Smart default for where orange starts (a character index into the full text). The slider overrides this.
 const SPLITS={OUTDOORS:3, FLOCKFAM:5, BACKCOUNTRY:4, OVERLAND:4, OFFGRID:3, OFFROAD:3, DOWNHILL:4,
   TRAILHEAD:5, CAMPFIRE:4, WILDLIFE:4, SUNRISE:3, SUNSET:3, DAYBREAK:3, NIGHTFALL:5, MOUNTAINSIDE:8};
 function autoSplit(t){
   const lines=t.split("\n"); const starts=[]; let off=0;
   for(let i=0;i<lines.length;i++){starts.push(off);off+=lines[i].length+1;}
   const ne=[]; lines.forEach((l,i)=>{if(l.trim())ne.push(i);});
-  if(ne.length>=2) return starts[ne[ne.length-1]];       // multi-line: start of last line
+  if(ne.length>=2) return starts[ne[ne.length-1]];
   const w=t.trim(); if(!w) return 0; const base=t.indexOf(w);
   const words=w.split(/\s+/);
-  if(words.length>=2){                                    // phrase: last ~40% of words
-    const k=Math.max(1,Math.ceil(words.length*0.4));
-    return base+words.slice(0,words.length-k).join(" ").length+1;
-  }
-  const known=SPLITS[w.toUpperCase()];                    // single word
-  if(known) return base+known;
-  if(w.length<2) return t.length;
-  return base+Math.ceil(w.length/2);
+  if(words.length>=2){const k=Math.max(1,Math.ceil(words.length*0.4));return base+words.slice(0,words.length-k).join(" ").length+1;}
+  const known=SPLITS[w.toUpperCase()]; if(known) return base+known;
+  if(w.length<2) return t.length; return base+Math.ceil(w.length/2);
 }
-function splitIndex(){ return state.manual!=null ? state.manual : autoSplit(state.text); }
-function colorize(){
-  const t=state.text;
+function colorize(sl){
+  const t=sl.text;
   if(!t.trim()) return '<span style="opacity:.35">Quote or describe what you’re looking for</span>';
-  if(t.includes("*")) return fmt(t);                      // *asterisk* manual override
-  if(!state.twoTone) return W(t);                         // plain white while typing
-  let i=Math.max(0,Math.min(splitIndex(),t.length));
+  if(t.includes("*")) return fmt(t);
+  if(!sl.twoTone) return W(t);
+  let i=sl.manual!=null?sl.manual:autoSplit(t);
+  i=Math.max(0,Math.min(i,t.length));
   const a=t.slice(0,i), b=t.slice(i);
-  return state.swap ? Or(a)+W(b) : W(a)+Or(b);
+  return sl.swap ? Or(a)+W(b) : W(a)+Or(b);
 }
 
-function render(){
-  const t=state.text.trim(), attr=state.attr.trim(), bg=state.bg;
+function slideHTML(sl){
+  const t=sl.text.trim(), attr=sl.attr.trim(), bg=sl.bg;
   const bgHtml = bg
     ? `<div style="position:absolute;inset:0;background:url('${bg}') center/cover no-repeat;filter:brightness(.8) contrast(1.05);z-index:1"></div>`
     : `<div style="position:absolute;inset:0;background:#0a0a0b;z-index:1"></div>`;
@@ -157,18 +162,45 @@ function render(){
       <div style="flex:1">${attr?`<div class="mono" style="font-size:1.7rem;color:${O};line-height:1.2">${esc(attr)}</div>`:''}</div>
       <img src="${LOGO}" style="height:46px;flex-shrink:0">
     </div>`;
-  $("#canvas").innerHTML = `${bgHtml}${scrim}
+  return `${bgHtml}${scrim}
     <img src="${RAVEN}" style="position:absolute;top:48px;left:52px;height:118px;z-index:10;opacity:.95">
     <div style="position:absolute;bottom:72px;left:0;right:0;padding:0 68px;z-index:10">
       <div style="font-family:Anton;font-size:8rem;line-height:.6;color:${O};margin-bottom:14px">&ldquo;</div>
-      <div style="font-family:Anton;text-transform:uppercase;font-size:${fontRem(t)}rem;line-height:.98">${colorize()}</div>
+      <div style="font-family:Anton;text-transform:uppercase;font-size:${fontRem(t)}rem;line-height:.98">${colorize(sl)}</div>
       <div style="width:72px;height:5px;background:${O};margin-top:30px"></div>
       ${attrRow}
     </div>`;
 }
 
-/* actions */
-function onUpload(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{state.bg=r.result;render();};r.readAsDataURL(f);}
+function slidesBar(){
+  const bar=$("#slides"); let h="";
+  state.slides.forEach((s,i)=>{h+=`<button type="button" class="chip ${i===state.cur?'on':''}" data-i="${i}">${i+1}</button>`;});
+  if(state.slides.length<10) h+=`<button type="button" class="chip add" id="addSlide">+ Slide</button>`;
+  bar.innerHTML=h;
+  bar.querySelectorAll(".chip[data-i]").forEach(b=>b.onclick=()=>goto(+b.dataset.i));
+  const add=$("#addSlide"); if(add) add.onclick=addSlide;
+  const multi=state.slides.length>1;
+  $("#exportAll").style.display=multi?"block":"none";
+  $("#exportAll").textContent="Download all ("+state.slides.length+")";
+  $("#delSlide").style.display=multi?"block":"none";
+}
+function syncForm(){
+  const s=S();
+  $("#text").value=s.text; $("#attr").value=s.attr; $("#genPrompt").value=s.genPrompt;
+  const rng=$("#splitRange"); rng.max=s.text.length; rng.value=(s.manual!=null?s.manual:autoSplit(s.text))||0;
+}
+function render(){ $("#canvas").innerHTML=slideHTML(S()); slidesBar(); }
+
+function goto(i){ state.cur=i; S().twoTone=true; syncForm(); render(); }
+function addSlide(){ state.slides.push(newSlide()); state.cur=state.slides.length-1; syncForm(); render(); }
+function delSlide(){
+  if(state.slides.length<2) return;
+  state.slides.splice(state.cur,1);
+  state.cur=Math.min(state.cur,state.slides.length-1);
+  syncForm(); render();
+}
+
+function onUpload(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{S().bg=r.result;render();};r.readAsDataURL(f);}
 async function onGenerate(){
   const desc=$("#genPrompt").value.trim();
   if(!desc){alert("Describe the image you want to generate first.");return;}
@@ -177,37 +209,52 @@ async function onGenerate(){
   try{
     const {data,error}=await sb.functions.invoke("generate-plate",{body:{prompt}});
     if(error||!data||data.error){alert("Generation failed: "+((data&&data.error)||(error&&error.message)||"unknown"));}
-    else{state.bg=data.imageUrl;render();}
+    else{S().bg=data.imageUrl;render();}
   }catch(err){alert("Generation failed: "+err.message);}
   setBusy("#genBtn","Generate Image",true);$("#hint").textContent="";
 }
 function setBusy(sel,txt,done){const b=$(sel);if(!b)return;if(done){b.textContent=txt;b.disabled=false;}else{b.innerHTML=`<span class="spin"></span>${txt}`;b.disabled=true;}}
 
+async function toPng(){return await htmlToImage.toPng($("#canvas"),{width:1080,height:1350,pixelRatio:1,cacheBust:true});}
 async function onExport(){
   setBusy("#exportBtn","Rendering…");
+  try{const url=await toPng();const a=document.createElement("a");a.download=`flockfam_${Date.now()}.png`;a.href=url;a.click();}
+  catch(err){alert("Export failed: "+err.message);}
+  setBusy("#exportBtn","Download this slide",true);
+}
+async function onExportAll(){
+  setBusy("#exportAll","Rendering…");$("#hint").textContent="Rendering all slides — allow multiple downloads if Safari asks…";
   try{
-    const url=await htmlToImage.toPng($("#canvas"),{width:1080,height:1350,pixelRatio:1,cacheBust:true});
-    const a=document.createElement("a");a.download=`flockfam_post_${Date.now()}.png`;a.href=url;a.click();
+    for(let i=0;i<state.slides.length;i++){
+      $("#canvas").innerHTML=slideHTML(state.slides[i]);
+      await new Promise(r=>setTimeout(r,150));
+      const url=await toPng();
+      const a=document.createElement("a");a.download=`flockfam_slide_${String(i+1).padStart(2,"0")}.png`;a.href=url;a.click();
+      await new Promise(r=>setTimeout(r,300));
+    }
   }catch(err){alert("Export failed: "+err.message);}
-  setBusy("#exportBtn","Download PNG",true);
+  render();$("#hint").textContent="";setBusy("#exportAll","Download all ("+state.slides.length+")",true);
 }
 
 function bind(){
   const rng=$("#splitRange");
-  $("#text").addEventListener("input",e=>{state.text=e.target.value;state.twoTone=false;state.manual=null;rng.max=state.text.length;render();});
-  $("#text").addEventListener("blur",()=>{state.twoTone=true;if(state.manual==null)rng.value=autoSplit(state.text);render();});
-  rng.addEventListener("input",e=>{state.manual=parseInt(e.target.value)||0;state.twoTone=true;render();});
-  $("#attr").addEventListener("input",e=>{state.attr=e.target.value;render();});
-  $("#flipBtn").onclick=()=>{state.twoTone=true;state.swap=!state.swap;render();};
+  $("#text").addEventListener("input",e=>{S().text=e.target.value;S().twoTone=false;S().manual=null;rng.max=S().text.length;render();});
+  $("#text").addEventListener("blur",()=>{S().twoTone=true;if(S().manual==null)rng.value=autoSplit(S().text);render();});
+  rng.addEventListener("input",e=>{S().manual=parseInt(e.target.value)||0;S().twoTone=true;render();});
+  $("#attr").addEventListener("input",e=>{S().attr=e.target.value;render();});
+  $("#genPrompt").addEventListener("input",e=>{S().genPrompt=e.target.value;});
+  $("#flipBtn").onclick=()=>{S().twoTone=true;S().swap=!S().swap;render();};
   $("#upBtn").onclick=()=>$("#file").click();
   $("#file").onchange=onUpload;
   $("#genBtn").onclick=onGenerate;
-  $("#clearBg").onclick=()=>{state.bg="";render();};
+  $("#clearBg").onclick=()=>{S().bg="";render();};
+  $("#delSlide").onclick=delSlide;
   $("#exportBtn").addEventListener("click",onExport);
+  $("#exportAll").addEventListener("click",onExportAll);
 }
-function fit(){const s=$("#stage");const sc=Math.min((s.clientWidth-48)/1080,(s.clientHeight-90)/1350,0.62);$("#wrap").style.transform=`scale(${sc})`;$("#wrap").style.height=(1350*sc)+"px";$("#wrap").style.width=(1080*sc)+"px";}
+function fit(){const s=$("#stage");const sc=Math.min((s.clientWidth-48)/1080,(s.clientHeight-150)/1350,0.6);$("#wrap").style.transform=`scale(${sc})`;$("#wrap").style.height=(1350*sc)+"px";$("#wrap").style.width=(1080*sc)+"px";}
 
-async function showApp(){$("#login").style.display="none";$("#app").style.display="grid";bind();render();fit();}
+async function showApp(){$("#login").style.display="none";$("#app").style.display="grid";bind();syncForm();render();fit();}
 $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginErr").textContent="";
   const {error}=await sb.auth.signInWithPassword({email:$("#email").value,password:$("#password").value});
   if(error){$("#loginErr").textContent=error.message;return;}showApp();});
