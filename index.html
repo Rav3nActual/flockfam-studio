@@ -205,7 +205,7 @@ async function onGenerate(){
   const desc=$("#genPrompt").value.trim();
   if(!desc){alert("Describe the image you want to generate first.");return;}
   setBusy("#genBtn","Generating…");$("#hint").textContent="Generating your image — about 20-30 seconds…";
-  const prompt=desc+". FlockFam brand style: cinematic, deep charcoal-black background, dramatic dark vignette, premium rugged outdoor aesthetic, bone/off-white highlights. Burnt-orange (#EC6328) appears ONLY as light — rim-light, sky glow, sunset, or embers — never painted onto subjects; any raven, crow, or bird must have pure glossy BLACK feathers (not orange feathers). No blue or teal. No text.";
+  const prompt=desc+". Style: cinematic, moody, premium rugged outdoor photography; deep dark tones, dramatic vignette, natural muted color. Any raven, crow, or bird must be SOLID BLACK with pure glossy black feathers — never orange, amber, rust, gold, or two-tone plumage. No neon, no blue or teal tint. No text, no watermark.";
   try{
     const {data,error}=await sb.functions.invoke("generate-plate",{body:{prompt}});
     if(error||!data||data.error){alert("Generation failed: "+((data&&data.error)||(error&&error.message)||"unknown"));}
